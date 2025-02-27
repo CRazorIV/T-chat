@@ -3,20 +3,21 @@ import asyncio
 
 connected_clients = set()
 
-async def handle_client(websocket, path):
+async def handle_client(websocket, path=None):  # 'path' is nu optioneel
     connected_clients.add(websocket)
     try:
         async for message in websocket:
-            print(f"message received: {message}")
+            print(f"Message received: {message}")
             for client in connected_clients:
                 if client != websocket:
                     await client.send(message)
-    except  websockets.exceptions.ConnectionClosed:
-        print(f"Cliet has terminated the connection!")
+    except websockets.exceptions.ConnectionClosed:
+        print("Client has terminated the connection!")
     finally:
         connected_clients.remove(websocket)
 
-start_server = websockets.serve(handle_client, "localhost", 8765)
+async def main():
+    async with websockets.serve(handle_client, "localhost", 8765):
+        await asyncio.Future()  # Houd de server draaiend
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+asyncio.run(main())  # Start de event loop correct
