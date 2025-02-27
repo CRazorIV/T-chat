@@ -1,23 +1,32 @@
 import websockets
 import asyncio
+import datetime
 
-connected_clients = set()
+connected_clients = {}
 
-async def handle_client(websocket, path=None):  # 'path' is nu optioneel
-    connected_clients.add(websocket)
+async def handle_client(websocket):
+    username = await websocket.recv()  # Vraag username
+    connected_clients[websocket] = username
+    print(f"{username} connected.")
+
     try:
         async for message in websocket:
-            print(f"Message received: {message}")
-            for client in connected_clients:
+            timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+            formatted_message = f"{username}/{timestamp}: {message}"
+            print(formatted_message)
+
+            # Stuur bericht naar alle clients
+            for client in connected_clients.keys():
                 if client != websocket:
-                    await client.send(message)
+                    await client.send(formatted_message)
+
     except websockets.exceptions.ConnectionClosed:
-        print("Client has terminated the connection!")
+        print(f"{connected_clients[websocket]} disconnected.")
     finally:
-        connected_clients.remove(websocket)
+        del connected_clients[websocket]  # Verwijder client bij disconnect
 
 async def main():
     async with websockets.serve(handle_client, "localhost", 8765):
-        await asyncio.Future()  # Houd de server draaiend
+        await asyncio.Future()  # Houd server draaiend
 
-asyncio.run(main())  # Start de event loop correct
+asyncio.run(main())
